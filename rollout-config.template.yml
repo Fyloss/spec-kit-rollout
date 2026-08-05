@@ -1,0 +1,42 @@
+# rollout-config.template.yml
+#
+# Template for the project-level `rollout-config.yml`. Copy this file to
+# `.specify/extensions/rollout/rollout-config.yml` (or let `specify extension
+# add` do so) and edit the non-secret pointer values below.
+#
+# SECURITY WARNING: this file, and the file you copy it to, MUST NEVER
+# contain a real credential/token value — only the *name* of the environment
+# variable the provider MCP server reads at launch (`mcp.token_env_var`
+# below). The token itself is consumed only by the MCP server process at
+# launch time, read directly from the OS environment. The agent must never
+# read or echo the token value under any circumstance — not from this file,
+# not from the environment, not from any command output.
+#
+# For a personal override (e.g. a sandbox project key or a locally-running
+# MCP server build) without touching this shared file, create
+# `.specify/extensions/rollout/local-config.yml` with just the fields you
+# want to override. Spec Kit does NOT automatically gitignore that file for
+# you — add your own `.gitignore` rule for
+# `.specify/extensions/rollout/local-config.yml` in your project.
+
+provider: launchdarkly
+
+# Non-secret pointers only (see docs/foundation/vision.md section 8).
+launchdarkly:
+  project_key: ""
+  environments: []
+
+# Canonical, pinned reference to the official provider MCP server.
+# Placeholder only — populated by a later feature.
+mcp:
+  command: ""
+  args: []
+  version: ""
+  repository: ""
+  # Name only — never a token value. The MCP server process reads this
+  # environment variable directly; nothing else should ever read or log it.
+  token_env_var: "LAUNCHDARKLY_API_TOKEN"
+
+# Team-level toggle for the extension's hooks (see vision.md section 5.3).
+hooks:
+  enabled: true

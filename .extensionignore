@@ -1,0 +1,27 @@
+# Development-only files excluded from the installed copy of this extension.
+# Patterns use .gitignore syntax (see specify_cli extension manager docs).
+
+# Version control metadata — never needed by an installed copy, and
+# excluding it avoids copying the entire repository history per install.
+.git/
+
+# Spec Kit's own project state (feature specs, installed extensions,
+# templates, scripts). CRITICAL: this package's source directory is the
+# repository root, and `.specify/extensions/` is where `specify extension
+# add` writes the installed copy — without this exclusion, installing from
+# the repo root recursively copies the destination into itself. Also keeps
+# this repo's own specs/plans out of the installed package.
+.specify/
+
+# Test files (none yet, but reserved so future tests never ship)
+tests/
+
+# Source documentation (vision doc, design notes) — not needed by an
+# installed copy; the vision lives in the repository, not the package output.
+docs/
+
+# CI / repository tooling
+.github/
+
+# Feature specs produced by this repo's own use of Spec Kit
+specs/

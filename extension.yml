@@ -1,0 +1,115 @@
+schema_version: "1.0"
+
+extension:
+  id: rollout
+  name: Rollout
+  version: 1.0.0
+  description: >-
+    Progressive-delivery capability for Spec-Driven Development: teaches
+    agents to recognize feature-flag / canary delivery candidates and fold a
+    concrete rollout strategy into specs, plans, tasks, and implementation.
+  author: rollout contributors
+  repository: https://github.com/github/spec-kit-rollout
+  license: MIT
+  homepage: https://github.com/github/spec-kit-rollout
+  category: integration
+  effect: read-write
+
+requires:
+  speckit_version: ">=0.12.0"
+
+provides:
+  commands:
+    - name: speckit.rollout.brief-specify
+      file: commands/brief-specify.md
+      description: Pre-specify briefing — rollout detection doctrine and Delivery Considerations marker instructions.
+    - name: speckit.rollout.brief-clarify
+      file: commands/brief-clarify.md
+      description: Pre-clarify briefing — preserve the rollout marker and elicit missing rollout parameters.
+    - name: speckit.rollout.brief-plan
+      file: commands/brief-plan.md
+      description: Pre-plan briefing — produce the Delivery Strategy section in plan.md.
+    - name: speckit.rollout.brief-tasks
+      file: commands/brief-tasks.md
+      description: Pre-tasks briefing — emit rollout tasks derived from the plan's Delivery Strategy.
+    - name: speckit.rollout.brief-analyze
+      file: commands/brief-analyze.md
+      description: Pre-analyze briefing — validate rollout-chain consistency across spec, plan, and tasks.
+    - name: speckit.rollout.brief-checklist
+      file: commands/brief-checklist.md
+      description: Pre-checklist briefing — add rollout-quality checklist items.
+    - name: speckit.rollout.brief-implement
+      file: commands/brief-implement.md
+      description: Pre-implement briefing — introspect the provider MCP and execute provider actions with guardrails.
+    - name: speckit.rollout.connect
+      file: commands/connect.md
+      description: One-time setup command that registers the pinned LaunchDarkly MCP server for the active Spec Kit client.
+  config:
+    - id: rollout-config
+      file: rollout-config.yml
+      template: rollout-config.template.yml
+      required: false
+
+hooks:
+  before_specify:
+    command: speckit.rollout.brief-specify
+    optional: false
+  before_clarify:
+    command: speckit.rollout.brief-clarify
+    optional: false
+  before_plan:
+    command: speckit.rollout.brief-plan
+    optional: false
+  before_tasks:
+    command: speckit.rollout.brief-tasks
+    optional: false
+  before_analyze:
+    command: speckit.rollout.brief-analyze
+    optional: false
+  before_checklist:
+    command: speckit.rollout.brief-checklist
+    optional: false
+  before_implement:
+    command: speckit.rollout.brief-implement
+    optional: false
+
+# Layered configuration defaults (see specify_cli ConfigManager). These are
+# resolved when no project/local config or env var overrides them; real
+# provider defaults (LaunchDarkly project key/environments, MCP server pin)
+# remain empty placeholders here, filled in per-project via
+# rollout-config.yml.
+config:
+  defaults:
+    provider: launchdarkly
+    hooks:
+      enabled: true
+  config_schema:
+    type: object
+    properties:
+      provider:
+        type: string
+      launchdarkly:
+        type: object
+        properties:
+          project_key:
+            type: string
+          environments:
+            type: array
+      mcp:
+        type: object
+        properties:
+          command:
+            type: string
+          args:
+            type: array
+          version:
+            type: string
+          repository:
+            type: string
+          token_env_var:
+            type: string
+      hooks:
+        type: object
+        properties:
+          enabled:
+            type: boolean
