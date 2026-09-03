@@ -1,28 +1,32 @@
 <!--
 Sync Impact Report — Amendment
-Version change: 1.1.0 → 2.0.0
-Rationale: MAJOR bump — Principle IV is redefined in a backward-incompatible
-  way. The prior wording required "only the pinned, official provider MCP
-  server referenced in config" and forbade the agent from ever "searching
-  for" a server. Feature 013 (rollout-config-wizard)'s entire design —
-  approved across two spec revisions — is live, runtime discovery of
-  whichever official MCP server the developer has already registered in
-  their own MCP client, re-verified fresh on every wizard run, with no
-  config-pinned command/args/version reference at all. This is incompatible
-  with the old rule's literal exclusivity, not an additive clarification, so
-  it is a MAJOR change, not MINOR/PATCH. The Scope Constraints bullet naming
-  `speckit.rollout.connect` is also updated (that command is renamed/split
-  into `speckit.rollout.config` + `speckit.rollout.provider` by Feature 013)
-  and its no-fabrication guarantee is elevated from spec-level detail to a
-  durable governance constraint.
+Version change: 2.0.0 → 2.1.0
+Rationale: MINOR bump — Principle IV's closing sentence is refined, not
+  redefined. As literally worded, "MUST NEVER be cached, persisted, or
+  assumed unchanged from a prior run" applied to "which server is selected,"
+  which contradicts Feature 013 (rollout-config-wizard)'s FR-018 — an
+  already-implemented, deliberate requirement that the selected MCP server's
+  name/key (`mcp_server`) be persisted to
+  `.specify/extensions/rollout/local-config.yml`, read back by both
+  `commands/config.md` and `commands/brief-implement.md`. This amendment adds
+  a carve-out (per reviewer sebastienthibaud): the one-time developer
+  selection MAY be persisted (that persistence is the entire point of
+  `speckit.rollout.config`), but a persisted selection's continued
+  registration/availability MUST still be re-verified fresh on every
+  invocation, never trusted blindly from the persisted value alone. The
+  "never cached/persisted/assumed unchanged" rule remains in full force for
+  capability/operating-mode classification (e.g., hosted/local `server_type`
+  determination, `tools/list`-derived capabilities) — full stop. This
+  narrows an internal contradiction rather than removing or redefining an
+  existing guarantee, but it materially changes what the principle permits
+  (not just wording), so it is MINOR, not PATCH or MAJOR.
 Modified principles:
-  - IV. Provider-Neutral Doctrine, Official MCP Only → now permits binding to
-    an official provider MCP server either via a single pinned config
-    reference OR via live introspection of the developer's own already-
-    registered official server instances, re-verified fresh every time
-    (never cached). Still forbids substituting, forking, or falling back to
-    any unofficial/unauthorized implementation under any circumstance.
-Added sections: none (Scope Constraints bullet updated, not added)
+  - IV. Provider-Neutral Doctrine, Official MCP Only → closing sentence split
+    to distinguish "which server is selected" (a persistable, one-time
+    developer decision, re-verified for continued availability only) from
+    "capability or operating-mode classification" (never cached, persisted,
+    or assumed unchanged, full stop).
+Added sections: none
 Removed sections: none
 Templates requiring updates:
   - .specify/templates/plan-template.md — ✅ no change needed (Constitution
@@ -30,24 +34,22 @@ Templates requiring updates:
   - .specify/templates/spec-template.md — ✅ no change needed
   - .specify/templates/tasks-template.md — ✅ no change needed
   - .specify/templates/checklist-template.md — ✅ no change needed
-  - specs/013-rollout-config-wizard/plan.md — ✅ updated in this change: its
-    Constitution Check's "⚠ FLAGGED CONFLICT" against the old Principle IV
-    wording, and its Complexity Tracking entries recommending this exact
-    amendment, are now marked resolved.
-  - commands/brief-implement.md, commands/connect.md, docs/foundation/
-    vision.md, docs/providers.md, docs/usage.md, README.md — ⚠ pending:
-    these still describe the pre-amendment "pinned MCP reference" design
-    (Features 002/010/011, implemented before this amendment) and will be
-    brought into compliance when Feature 013 is implemented
-    (`/speckit.tasks` + `/speckit.implement`), per that feature's own plan.md
-    Scale/Scope list. Not edited by this amendment itself (constitution
-    amendments do not implement features).
-  - specs/002-config-system/, specs/010-rollout-implement-doctrine/,
-    specs/011-rollout-connect-setup/ (spec.md/plan.md) — ℹ informational
-    only: these document compliance with the pre-amendment Principle IV
-    wording, which was correct at the time they were ratified/implemented.
-    No edit required; Feature 013 will add superseded-acceptance-criteria
-    annotations to them per its own FR-021 scope.
+  - docs/foundation/vision.md §6.2 — ✅ no change needed: its prose already
+    states the selected server's name/key IS saved under `mcp_server` in
+    `local-config.yml` immediately after the "re-verified fresh on every
+    invocation (never cached)" sentence, so it already reads consistently
+    with this carve-out; that phrase there describes the live-introspection
+    resolution mode generally, not a claim that the selection itself is
+    never persisted.
+  - docs/providers.md — ✅ no change needed: it does not restate the "never
+    persisted" language at all; it already only says the server's name/key
+    is saved under `mcp_server`, and its "discovery already stays fresh"
+    line ("What already generalizes for free") refers to `tools/list`
+    capability discovery, not selection persistence.
+  - commands/config.md, commands/brief-implement.md — ℹ informational only:
+    already implement exactly the persisted-selection /
+    re-verify-availability behavior this amendment legalizes; no change
+    required.
 Follow-up TODOs: none
 -->
 # Rollout Extension Constitution
@@ -103,11 +105,15 @@ from a single pinned reference in config, or (b) by live introspection of
 the developer's own already-registered MCP servers, binding to whichever
 official server instance is found. Doctrine MUST NOT instruct the agent to
 substitute, fork, or fall back to an unofficial or unauthorized MCP server
-implementation under any circumstance, in either resolution mode. Any
-runtime discovery — including which server is selected and any
-classification of its capabilities or operating mode — MUST be re-verified
-fresh on every invocation; it MUST NEVER be cached, persisted, or assumed
-unchanged from a prior run.
+implementation under any circumstance, in either resolution mode. Which
+official server is selected is a one-time developer decision and MAY be
+persisted (this persistence is the entire point of `speckit.rollout.config`);
+however, a persisted selection MUST NEVER be trusted blindly — its continued
+registration and availability MUST be re-verified fresh on every invocation.
+Any classification of a server's capabilities or operating mode — including
+hosted/local `server_type` determination and any `tools/list`-derived
+capability — MUST NEVER be cached, persisted, or assumed unchanged from a
+prior run.
 
 **Marker back-fill is state, not content**: Writing the `## Delivery
 Considerations` marker into `spec.md` at a later phase (e.g., a `/plan`-time
@@ -184,5 +190,5 @@ Phase 0 research and MUST re-verify it after Phase 1 design; any unresolved
 violation must be justified in the plan's Complexity Tracking section or the
 plan MUST be revised to comply.
 
-**Version**: 2.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-08-12
+**Version**: 2.1.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-09-03
 
