@@ -1,22 +1,28 @@
 <!--
 Sync Impact Report — Amendment
-Version change: 1.0.0 → 1.1.0
-Rationale: MINOR bump — materially expands guidance on Principle III by
-  adding an explicit carve-out distinguishing gate-state marker back-fill
-  from content derivation; no principle removed or redefined, so not MAJOR;
-  the added sentence changes what is permitted (not just wording), so not a
-  PATCH-level non-semantic fix.
+Version change: 1.1.0 → 2.0.0
+Rationale: MAJOR bump — Principle IV is redefined in a backward-incompatible
+  way. The prior wording required "only the pinned, official provider MCP
+  server referenced in config" and forbade the agent from ever "searching
+  for" a server. Feature 013 (rollout-config-wizard)'s entire design —
+  approved across two spec revisions — is live, runtime discovery of
+  whichever official MCP server the developer has already registered in
+  their own MCP client, re-verified fresh on every wizard run, with no
+  config-pinned command/args/version reference at all. This is incompatible
+  with the old rule's literal exclusivity, not an additive clarification, so
+  it is a MAJOR change, not MINOR/PATCH. The Scope Constraints bullet naming
+  `speckit.rollout.connect` is also updated (that command is renamed/split
+  into `speckit.rollout.config` + `speckit.rollout.provider` by Feature 013)
+  and its no-fabrication guarantee is elevated from spec-level detail to a
+  durable governance constraint.
 Modified principles:
-  - III. Strict Content Lineage — added a clarifying carve-out: writing the
-    `## Delivery Considerations` *marker* into `spec.md` at plan time (state
-    back-fill for late-introduced rollout intent, per vision.md §5.2 and
-    Feature 006's `/plan`-arguments sniff) is gate-state bookkeeping, not the
-    "content" whose one-direction flow this principle governs, and is
-    therefore not an instance of the forbidden "spec content from plan"
-    pattern — provided the back-filled marker verbatim-matches the Feature
-    003 contract and no other spec.md content is authored from plan-phase
-    input.
-Added sections: none
+  - IV. Provider-Neutral Doctrine, Official MCP Only → now permits binding to
+    an official provider MCP server either via a single pinned config
+    reference OR via live introspection of the developer's own already-
+    registered official server instances, re-verified fresh every time
+    (never cached). Still forbids substituting, forking, or falling back to
+    any unofficial/unauthorized implementation under any circumstance.
+Added sections: none (Scope Constraints bullet updated, not added)
 Removed sections: none
 Templates requiring updates:
   - .specify/templates/plan-template.md — ✅ no change needed (Constitution
@@ -24,9 +30,24 @@ Templates requiring updates:
   - .specify/templates/spec-template.md — ✅ no change needed
   - .specify/templates/tasks-template.md — ✅ no change needed
   - .specify/templates/checklist-template.md — ✅ no change needed
-  - specs/006-rollout-plan-doctrine/plan.md — ⚠ follow-up: Constitution
-    Check section must be re-run against this ratified constitution (was
-    written against the unratified template and is stale)
+  - specs/013-rollout-config-wizard/plan.md — ✅ updated in this change: its
+    Constitution Check's "⚠ FLAGGED CONFLICT" against the old Principle IV
+    wording, and its Complexity Tracking entries recommending this exact
+    amendment, are now marked resolved.
+  - commands/brief-implement.md, commands/connect.md, docs/foundation/
+    vision.md, docs/providers.md, docs/usage.md, README.md — ⚠ pending:
+    these still describe the pre-amendment "pinned MCP reference" design
+    (Features 002/010/011, implemented before this amendment) and will be
+    brought into compliance when Feature 013 is implemented
+    (`/speckit.tasks` + `/speckit.implement`), per that feature's own plan.md
+    Scale/Scope list. Not edited by this amendment itself (constitution
+    amendments do not implement features).
+  - specs/002-config-system/, specs/010-rollout-implement-doctrine/,
+    specs/011-rollout-connect-setup/ (spec.md/plan.md) — ℹ informational
+    only: these document compliance with the pre-amendment Principle IV
+    wording, which was correct at the time they were ratified/implemented.
+    No edit required; Feature 013 will add superseded-acceptance-criteria
+    annotations to them per its own FR-021 scope.
 Follow-up TODOs: none
 -->
 # Rollout Extension Constitution
@@ -76,10 +97,17 @@ discover segments/audiences, create flag, set targeting rules, set rollout
 percentage, read flag status, archive flag) and MUST bind those intents to
 real tools only via MCP introspection (`tools/list`, `resources/list`,
 `prompts/list`) at runtime. The extension MUST NOT build a per-provider API
-wrapper or maintain a bespoke capability contract per provider. Only the
-pinned, official provider MCP server referenced in config MAY be used;
-doctrine MUST NOT instruct the agent to search for, substitute, or fall back
-to an alternative, forked, or unofficial MCP server under any circumstance.
+wrapper or maintain a bespoke capability contract per provider. Only an
+official, provider-published MCP server MAY be used — resolved either (a)
+from a single pinned reference in config, or (b) by live introspection of
+the developer's own already-registered MCP servers, binding to whichever
+official server instance is found. Doctrine MUST NOT instruct the agent to
+substitute, fork, or fall back to an unofficial or unauthorized MCP server
+implementation under any circumstance, in either resolution mode. Any
+runtime discovery — including which server is selected and any
+classification of its capabilities or operating mode — MUST be re-verified
+fresh on every invocation; it MUST NEVER be cached, persisted, or assumed
+unchanged from a prior run.
 
 **Marker back-fill is state, not content**: Writing the `## Delivery
 Considerations` marker into `spec.md` at a later phase (e.g., a `/plan`-time
@@ -120,9 +148,13 @@ workflow.
   doctrine stays provider-neutral and MUST NOT special-case a provider's
   wording, flow, or terminology into the shared briefing commands. At most, an
   optional, clearly-labeled per-provider advisory note MAY be added.
-- `speckit.rollout.connect` MUST remain idempotent (safe to re-run with no
-  duplicate or conflicting state) and MUST NEVER write a secret value to any
-  file it generates or updates.
+- `speckit.rollout.config` and `speckit.rollout.provider` (the setup/switch
+  commands a developer runs to select and configure a provider's MCP
+  connection) MUST remain idempotent (safe to re-run with no duplicate or
+  conflicting state), MUST NEVER write a secret value to any file they
+  generate or update, and MUST NEVER fabricate a placeholder value (a
+  project ID, environment key, or any other identifier) when the developer
+  has not supplied or explicitly confirmed one.
 
 ## Development Workflow
 
@@ -152,4 +184,5 @@ Phase 0 research and MUST re-verify it after Phase 1 design; any unresolved
 violation must be justified in the plan's Complexity Tracking section or the
 plan MUST be revised to comply.
 
-**Version**: 1.1.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-08
+**Version**: 2.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-08-12
+

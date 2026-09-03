@@ -41,9 +41,12 @@ provides:
     - name: speckit.rollout.brief-implement
       file: commands/brief-implement.md
       description: Pre-implement briefing — introspect the provider MCP and execute provider actions with guardrails.
-    - name: speckit.rollout.connect
-      file: commands/connect.md
-      description: One-time setup command that registers the pinned LaunchDarkly MCP server for the active Spec Kit client.
+    - name: speckit.rollout.config
+      file: commands/config.md
+      description: Re-runnable guided setup wizard — discovers your registered LaunchDarkly MCP server, determines hosted vs. local, and writes a modular provider config block.
+    - name: speckit.rollout.provider
+      file: commands/provider.md
+      description: Switch the active provider, reusing a saved config block or triggering that provider's config preset.
   config:
     - id: rollout-config
       file: rollout-config.yml
@@ -75,9 +78,12 @@ hooks:
 
 # Layered configuration defaults (see specify_cli ConfigManager). These are
 # resolved when no project/local config or env var overrides them; real
-# provider defaults (LaunchDarkly project key/environments, MCP server pin)
+# provider defaults (LaunchDarkly project key/environments/server_type)
 # remain empty placeholders here, filled in per-project via
-# rollout-config.yml.
+# rollout-config.yml. This schema is modular per-provider (a second
+# provider adds a sibling top-level block, never touching `launchdarkly`'s
+# or `provider`'s type) and holds no MCP server registration fields — that
+# selection lives in local-config.yml, not this schema.
 config:
   defaults:
     provider: launchdarkly
@@ -95,18 +101,7 @@ config:
             type: string
           environments:
             type: array
-      mcp:
-        type: object
-        properties:
-          command:
-            type: string
-          args:
-            type: array
-          version:
-            type: string
-          repository:
-            type: string
-          token_env_var:
+          server_type:
             type: string
       hooks:
         type: object

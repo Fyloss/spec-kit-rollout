@@ -4,19 +4,34 @@
 # `.specify/extensions/rollout/rollout-config.yml` (or let `specify extension
 # add` do so) and edit the non-secret pointer values below.
 #
-# SECURITY WARNING: this file, and the file you copy it to, MUST NEVER
-# contain a real credential/token value — only the *name* of the environment
-# variable the provider MCP server reads at launch (`mcp.token_env_var`
-# below). The token itself is consumed only by the MCP server process at
-# launch time, read directly from the OS environment. The agent must never
-# read or echo the token value under any circumstance — not from this file,
-# not from the environment, not from any command output.
+# Modular per-provider shape: `provider` selects the *active* provider, and
+# each provider ever configured gets its own top-level block (e.g.
+# `launchdarkly:` below). Adding a second provider adds a sibling top-level
+# block here — it never touches this block or the `provider` field's type
+# (see docs/providers.md "Adding a new provider"). Run `/speckit.rollout.config`
+# to populate a provider's block via the guided wizard, or
+# `/speckit.rollout.provider <provider_name>` to switch the active provider.
 #
-# For a personal override (e.g. a sandbox project key or a locally-running
-# MCP server build) without touching this shared file, create
-# `.specify/extensions/rollout/local-config.yml` with just the fields you
-# want to override. Spec Kit does NOT automatically gitignore that file for
-# you — add your own `.gitignore` rule for
+# This file does NOT hold an MCP server registration (no `mcp.command`,
+# `mcp.args`, `mcp.version`, `mcp.repository`, or `mcp.token_env_var` field
+# exists anywhere in this schema). Register your provider's official MCP
+# server yourself, directly in your Spec Kit client's own native MCP
+# settings (e.g. `.vscode/mcp.json`) — `/speckit.rollout.config` only
+# discovers and uses whichever server you've already registered there; it
+# never writes to that file. The *selection* of which already-registered
+# MCP server to use (its name/key only, never its launch command or a
+# credential) is saved to `.specify/extensions/rollout/local-config.yml`,
+# not here.
+#
+# SECURITY WARNING: this file, and the file you copy it to, MUST NEVER
+# contain a real credential/token value. No step of this extension's
+# doctrine ever requests, reads, or stores one — your MCP client and MCP
+# server process own credential handling entirely.
+#
+# For a personal override (e.g. a sandbox project key) without touching
+# this shared file, create `.specify/extensions/rollout/local-config.yml`
+# with just the fields you want to override. Spec Kit does NOT automatically
+# gitignore that file for you — add your own `.gitignore` rule for
 # `.specify/extensions/rollout/local-config.yml` in your project.
 
 provider: launchdarkly
@@ -25,17 +40,10 @@ provider: launchdarkly
 launchdarkly:
   project_key: ""
   environments: []
-
-# Canonical, pinned reference to the official provider MCP server.
-# Placeholder only — populated by a later feature.
-mcp:
-  command: ""
-  args: []
-  version: ""
-  repository: ""
-  # Name only — never a token value. The MCP server process reads this
-  # environment variable directly; nothing else should ever read or log it.
-  token_env_var: "LAUNCHDARKLY_API_TOKEN"
+  # "hosted" | "local" | "" (unset). Recorded for reporting/traceability
+  # only — /speckit.rollout.config re-verifies this fresh on every run and
+  # never trusts this stored value as a cache.
+  server_type: ""
 
 # Team-level toggle for the extension's hooks (see vision.md section 5.3).
 hooks:
