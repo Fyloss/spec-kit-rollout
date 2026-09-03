@@ -255,3 +255,15 @@ Task: "Update README.md"
 ### Solo/Single-File Strategy
 
 Because Phases 3-8 all edit `commands/config.md`, there is no meaningful "parallel team" split within those phases the way the template's generic guidance describes — treat T007 through T026 as one continuous, ordered edit session against a single file, and only parallelize across Setup, Foundational, T028, and the Final Phase as noted above.
+
+## Phase 10: Convergence
+
+**Purpose**: Close a gap found during PR review after implementation: FR-018 pins the literal, flat key `mcp_server` for the `local-config.yml` MCP-server-selection field, but neither doctrine file that actually writes or reads it ever names that literal key — both only use vague "name/key" prose. Without the exact key name stated explicitly in the doctrine text itself, a future run/reader has no guarantee of agreeing with the writer on the field name.
+
+- [X] T039 [US1] Update `commands/config.md`'s Step 7 "Write" section so the bullet documenting the `local-config.yml` save states the literal, flat key `mcp_server` explicitly (e.g. `mcp_server: <selected server name/key>`), replacing the vague "name/key **only**" prose, with no alternate spelling or nesting (FR-018) (partial)
+- [X] T040 [US1] Update `commands/brief-implement.md`'s Step 3.1 read step so it looks up the saved MCP server selection under the literal key `mcp_server` in `local-config.yml` explicitly, replacing the vague "saved name/key from `local-config.yml`" prose, with no alternate spelling or nesting (FR-018) (partial)
+- [X] T041 [US1] Update `docs/foundation/vision.md` §6.2 and §8, both of which describe the `local-config.yml` MCP-server-selection save with vague "name/key" prose, to name the literal, flat key `mcp_server` explicitly (FR-018, FR-021) (partial)
+- [X] T042 [US1] Update `docs/providers.md`'s "Adding a new provider" guide, which describes the same save with vague "name/key" prose, to name the literal, flat key `mcp_server` explicitly (FR-018, FR-021) (partial)
+- [X] T043 [US1] Update `rollout-config.template.yml`'s header comment, which describes the same save with vague "name/key" prose, to name the literal, flat key `mcp_server` explicitly (FR-018) (partial)
+
+**Dependencies**: T039-T043 all depend on Phase 2 (Foundational) and the already-completed Phase 3 (US1) content in `commands/config.md`; none has a code dependency on the others (five different files) but all five should land together so every doctrine and prose reference agrees on the same literal key in the same change.

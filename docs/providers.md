@@ -120,8 +120,8 @@ would require, following the extension points already reserved in
 - **The credential chain** is provider-agnostic and, as of Feature 013, lives
   entirely outside this project's own config — the developer's own MCP
   client and MCP server process own it completely; only the MCP server's
-  name/key (never a launch command or a credential) is saved, in
-  `local-config.yml`.
+  name/key (never a launch command or a credential) is saved, under the
+  literal, flat key `mcp_server`, in `local-config.yml`.
 
 ### What you need to change
 

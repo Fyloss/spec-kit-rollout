@@ -37,8 +37,9 @@ hooks:
 
 The MCP server selection itself (which of the developer's own registered
 MCP servers to use — name/key only) is **not** part of this file. It lives
-in `.specify/extensions/rollout/local-config.yml` (Feature 013 FR-018). No
-`mcp.command`, `mcp.args`, `mcp.version`, `mcp.repository`, or
+in `.specify/extensions/rollout/local-config.yml`, under the literal, flat
+key `mcp_server` (Feature 013 FR-018) — e.g. `mcp_server: launchdarkly/mcp-server`.
+No `mcp.command`, `mcp.args`, `mcp.version`, `mcp.repository`, or
 `mcp.token_env_var` field exists anywhere in this schema anymore.
 
 ## Guarantees this feature makes

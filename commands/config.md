@@ -225,9 +225,11 @@ launchdarkly:
 
 - Zero `mcp.*` fields are ever written anywhere in this block or file
   (FR-017, FR-026).
-- Save the selected MCP server's name/key **only** (never a command,
-  arguments, version, repository, or credential value) to
-  `.specify/extensions/rollout/local-config.yml` (FR-018).
+- Save the selected MCP server's name/key under the literal, flat key
+  `mcp_server` (e.g. `mcp_server: <selected server name/key>`) in
+  `.specify/extensions/rollout/local-config.yml` — never a command,
+  arguments, version, repository, or credential value, and never an
+  alternate spelling or nested form of the key (FR-018).
 - `launchdarkly.server_type` records the Step 3 determination for
   reporting/traceability only — it is never read back as a cache on a
   future run; Step 3 always re-probes fresh (FR-008, data-model.md

@@ -455,7 +455,10 @@ rather than silently passed).
   documented or declared — they MUST NOT be reintroduced in any form by this
   feature.
 - **FR-018**: The resolved configuration schema MUST add a new field
-  recording the MCP server selected in step 2 (name/key only). This field
+  recording the MCP server selected in step 2 (name/key only), written under
+  the literal, flat key `mcp_server` (e.g. `mcp_server: launchdarkly/mcp-server`)
+  — every writer and reader of this value MUST use this exact key name, with
+  no alternate spelling or nesting. This field
   MUST live in the local, per-developer configuration layer
   (`.specify/extensions/rollout/local-config.yml`) by default, since it
   reflects what is registered in one specific developer's own client rather

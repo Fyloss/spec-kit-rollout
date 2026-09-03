@@ -20,8 +20,11 @@
 # discovers and uses whichever server you've already registered there; it
 # never writes to that file. The *selection* of which already-registered
 # MCP server to use (its name/key only, never its launch command or a
-# credential) is saved to `.specify/extensions/rollout/local-config.yml`,
-# not here.
+# credential) is saved under the literal, flat key `mcp_server` to
+# `.specify/extensions/rollout/local-config.yml`, not here.
+#
+# Example local-config.yml content:
+#   mcp_server: launchdarkly/mcp-server
 #
 # SECURITY WARNING: this file, and the file you copy it to, MUST NEVER
 # contain a real credential/token value. No step of this extension's

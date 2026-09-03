@@ -39,6 +39,7 @@ servers (if any) the rest of the run operates against.
 |---|---|
 | Candidate count | 0, 1, or many — drives step 2's branch |
 | Selected server identifier | Client-native name/label of the chosen MCP server entry (never a value this feature invents or writes) |
+| Persisted key | Written to `local-config.yml` under the literal, flat key `mcp_server` (FR-018) — this exact spelling MUST be used by every writer and reader, with no alternate nesting (e.g. `launchdarkly.mcp_server`) or spelling |
 
 ## MCP Server Type Determination
 

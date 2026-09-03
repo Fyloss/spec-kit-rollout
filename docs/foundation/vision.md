@@ -164,7 +164,7 @@ introspection-based discovery of the developer's own already-registered
 server, re-verified fresh on every invocation (never cached) — this
 extension uses the latter mode. Only the selected server's name/key (never
 its launch command, arguments, version, repository, or a credential) is
-saved, in `local-config.yml` (§8).
+saved, under the literal, flat key `mcp_server`, in `local-config.yml` (§8).
 
 ### 6.3 Graceful degradation
 
@@ -226,8 +226,8 @@ per-integration adapter table (the same pattern Spec Kit uses for integrations).
   Feature 013, no MCP launcher field of any kind (`mcp.command`/`args`/
   `version`/`repository`/`token_env_var` no longer exist in this schema at
   all). The developer's chosen MCP server's name/key (never its launch
-  details or a credential) is saved separately, in
-  `.specify/extensions/rollout/local-config.yml`.
+  details or a credential) is saved separately, under the literal, flat key
+  `mcp_server`, in `.specify/extensions/rollout/local-config.yml`.
 - The doctrine forbids the agent from reading, echoing, or inlining the token —
   reinforced by having no token-related field left in this project's own config
   to even inadvertently reference.
