@@ -92,9 +92,14 @@ Instruct the agent to:
 
 2. **Use exactly the MCP server the developer already registered and selected**, identified by looking up the literal, flat key `mcp_server` in `local-config.yml` (no alternate spelling or nested form). Do NOT search for or substitute a different LaunchDarkly MCP server, and do NOT attempt to register or launch one yourself — registration remains entirely the developer's own responsibility, done once via their own client's native MCP settings before `speckit.rollout.config` was ever run. (Constitution Principle IV — permits binding to an official provider MCP server via a single pinned config reference *or* via live introspection of the developer's own already-registered official server; this doctrine uses the latter mode.)
 
-3. **Degrade to plan-only mode if resolution is incomplete**: if `local-config.yml` has no saved MCP server selection, or `rollout-config.yml`'s `launchdarkly.project_key`/`environments` are entirely absent (the local-branch opt-out case from `speckit.rollout.config`), do not fabricate or guess these values — proceed directly to the existing "no MCP available" plan-only-mode path in Step 6 below.
+3. **Attempt fresh detection if there is no saved selection**: if `local-config.yml` has no saved `mcp_server` selection, do not immediately degrade — instead perform the same MCP server discovery & candidate-resolution heuristics documented in `commands/config.md`'s Step 2 (introspection-based LaunchDarkly-capable signals, never a hardcoded or pinned server reference), run fresh at runtime, and branch on the resulting candidate count:
+   - **Zero candidates**: fall through to point 4's plan-only-mode degradation, unchanged.
+   - **Exactly one candidate**: use it for this run's MCP introspection, and explicitly note in the agent's output that it was resolved via fresh detection rather than a saved `speckit.rollout.config` selection.
+   - **More than one candidate**: because this briefing runs non-interactively as part of `/speckit.implement` and cannot pause for developer disambiguation the way `commands/config.md`'s Step 2 does, treat this the same as "no MCP available" and fall through to point 4's plan-only-mode degradation, same as the zero-candidates case (FR-020).
 
-4. **No token value is ever read or handled here**: the selected MCP server's own credential handling (however it authenticates) is entirely between the developer's client and that server process; this doctrine never reads, requests, or echoes a credential/token value of any kind.
+4. **Degrade to plan-only mode if resolution is incomplete**: if the above fresh-detection fallback did not yield a usable server (zero or multiple candidates), or `rollout-config.yml`'s `launchdarkly.project_key`/`environments` are entirely absent (the local-branch opt-out case from `speckit.rollout.config`), do not fabricate or guess these values — proceed directly to the existing "no MCP available" plan-only-mode path in Step 6 below.
+
+5. **No token value is ever read or handled here**: the selected MCP server's own credential handling (however it authenticates) is entirely between the developer's client and that server process; this doctrine never reads, requests, or echoes a credential/token value of any kind.
 
 ### Step 3.2: Instruct Runtime MCP Introspection
 

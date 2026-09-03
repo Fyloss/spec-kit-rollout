@@ -147,11 +147,19 @@ switch/preset contract).
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-`.specify/memory/constitution.md` v2.0.0 is ratified (2026-07-08, last
-amended 2026-08-12) with six Core Principles plus Scope Constraints. The
+`.specify/memory/constitution.md` v2.1.0 is ratified (2026-07-08, last
+amended 2026-09-03) with six Core Principles plus Scope Constraints. The
 v2.0.0 amendment was made specifically to resolve this feature's Principle
 IV conflict, identified during this plan's first pass (see history below);
-this plan is checked against the current, amended text:
+a second amendment, v2.0.0 → v2.1.0 (2026-09-03), added a persistence
+carve-out to Principle IV — resolving a PR-review-identified contradiction
+between the prior "never cached, persisted, or assumed unchanged" wording
+and this feature's own FR-018 (which requires persisting the selected MCP
+server's name/key to `local-config.yml`). The carve-out clarifies that the
+one-time server *selection* MAY be persisted (re-verified fresh on every
+invocation), while capability/operating-mode *classification* (e.g.
+`server_type`) remains never-cached. This plan is checked against the
+current, v2.1.0 text:
 
 - **I. Additive-Only Extension**: PASS — this feature only rewrites/adds
   files already within this extension's own package (`commands/*.md`,
@@ -295,4 +303,14 @@ server (re-verified fresh every run) as an alternative to a single pinned
 config reference, and the Scope Constraints bullet now names
 `speckit.rollout.config`/`speckit.rollout.provider` directly. See the
 Constitution Check section above for the current, passing evaluation.
+
+A third conflict, found during PR review after this feature's initial
+implementation, was resolved the same way: Principle IV's "never cached,
+persisted, or assumed unchanged" wording literally forbade persisting which
+MCP server is selected, contradicting this feature's own FR-018. Running
+`/speckit.constitution` again amended the constitution to v2.1.0
+(2026-09-03), scoping that "never persisted" rule to capability/operating-
+mode classification only, while explicitly permitting the one-time server
+*selection* to be persisted (re-verified fresh on every invocation). See
+the Constitution Check section above for the current, passing evaluation.
 
