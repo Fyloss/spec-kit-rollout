@@ -17,64 +17,40 @@ implemented. This page has two audiences:
 
 ```mermaid
 flowchart TB
+    Wizard["speckit.rollout.config wizard\n(discovers your own registered MCP server)"]
     Doctrine["Doctrine files\n(commands/brief-plan.md, brief-implement.md)"]
-    Config["rollout-config.yml\nprovider: launchdarkly\nmcp: command/args/version/repository/token_env_var"]
-    MCP["Official provider MCP server\n(spawned with the token in its own env)"]
+    Config["rollout-config.yml\nprovider: launchdarkly\nlaunchdarkly: project_key/environments/server_type"]
+    MCP["Official provider MCP server\n(registered by you, in your own client's MCP settings)"]
     Introspect["Runtime introspection\ntools/list · resources/list · prompts/list"]
     Intents["7 provider-neutral intents\ndiscover envs · discover segments · create flag ·\nset targeting · set % rollout · read status · archive"]
 
-    Config -->|pins the server| MCP
-    Doctrine -->|reads config, connects| MCP
+    Wizard -->|discovers, read-only| MCP
+    Wizard -->|writes project/env selection| Config
+    Doctrine -->|reads config + your MCP selection, connects| MCP
     MCP --> Introspect
     Introspect -->|bind at runtime| Intents
     Intents -->|execute| MCP
 ```
 
-Nothing in the diagram above is provider-specific except the config block and
-the MCP pin — the doctrine's seven intents and the introspection step are
-already provider-neutral.
+Nothing in the diagram above is provider-specific except the config block —
+the doctrine's seven intents and the introspection step are already
+provider-neutral, and the wizard never writes to your client's own MCP
+configuration.
 
 ## Using the LaunchDarkly provider
 
-Everything here is regular project configuration — no code changes. See the
-[README's Configuration section](../README.md#configuration) for the full
-four-layer precedence (`extension.yml` defaults → project config → local
-override → env vars).
+Everything here is regular project configuration and one guided command — no
+code changes. See the [README's Configuration section](../README.md#configuration)
+for the full four-layer precedence (`extension.yml` defaults → project
+config → local override → env vars).
 
-### 1. Set the provider and project pointers
+### 1. Register the official LaunchDarkly MCP server yourself
 
-`.specify/extensions/rollout/rollout-config.yml` (copy from
-[rollout-config.template.yml](../rollout-config.template.yml)):
-
-```yaml
-provider: launchdarkly
-
-launchdarkly:
-  project_key: "my-ld-project"
-  environments: ["staging", "production"]
-```
-
-These are **non-secret pointers only** — never a token value.
-
-### 2. Pin the official MCP server
-
-```yaml
-mcp:
-  command: "launchdarkly-mcp-server"
-  args: []
-  version: "~1.0.0"
-  repository: "https://github.com/launchdarkly/mcp-server"
-  token_env_var: "LAUNCHDARKLY_API_TOKEN"
-```
-
-`command`/`args`/`version`/`repository` describe *which* official server to
-launch and how — `rollout` never substitutes an alternative implementation,
-even if one advertises the same tools (vision.md §6.2). `token_env_var` is a
-**name only**; the value is never written to config, never read by the agent,
-and never enters the model context — only the spawned MCP server process
-reads it from the OS environment. <a id="credentials"></a>
-
-### 3. Export the token, once, outside of git
+Before running any `rollout` command, register the official LaunchDarkly
+MCP server in your own Spec Kit client's native MCP settings (e.g.
+`.vscode/mcp.json`) — `rollout` never writes, creates, or modifies that
+file for you (vision.md §6.2). Export your LaunchDarkly token, once, outside
+of git:
 
 ```bash
 export LAUNCHDARKLY_API_TOKEN="..."   # in your shell profile, not in the repo
@@ -82,20 +58,40 @@ export LAUNCHDARKLY_API_TOKEN="..."   # in your shell profile, not in the repo
 
 Use a scoped, least-privilege LaunchDarkly token. See vision.md §8 for the
 full credential-security rationale (why this is the V1 approach vs. editor
-secret stores or encrypted files).
+secret stores or encrypted files). <a id="credentials"></a>
 
-### 4. Register the MCP server with your client
+### 2. Run the guided setup wizard
 
 ```
-/speckit.rollout.connect
+/speckit.rollout.config
 ```
 
-See [usage.md](usage.md#1-install-and-connect-once-per-project) for what this
-does and does not do.
+The wizard discovers, read-only, whichever MCP server(s) you've already
+registered; automatically determines whether the one you pick is
+LaunchDarkly's **hosted** or a **local** server; walks you through
+project/environment selection appropriate to that server type; verifies
+read access; and, after your explicit confirmation, writes exactly one
+modular config block:
+
+```yaml
+provider: launchdarkly
+
+launchdarkly:
+  project_key: "my-ld-project"
+  environments: ["staging", "production"]
+  server_type: hosted   # or: local
+```
+
+These are **non-secret pointers only** — never a token value, and never an
+MCP launcher command/args/version/repository (that concept no longer
+exists; see [usage.md](usage.md#1-register-your-mcp-server-then-run-the-wizard-once-per-project)
+for the full step-by-step). The wizard is safely re-runnable any time your
+selections change — see [usage.md](usage.md).
 
 That's it — no other steps are required. `brief-plan`, `brief-tasks`, and
-`brief-implement` pick up `provider`, `launchdarkly.*`, and `mcp.*` from
-resolved config automatically once a feature has rollout signal.
+`brief-implement` pick up `provider` and `launchdarkly.*` from resolved
+config automatically once a feature has rollout signal, resolving your MCP
+server selection from `local-config.yml`.
 
 ## Adding a new provider (extension developer guide)
 
@@ -118,11 +114,14 @@ would require, following the extension points already reserved in
   natural language and bound to whatever tools the configured MCP server
   actually advertises at runtime — no per-provider tool-name hardcoding to
   update.
-- **The `mcp.*` config block shape** (`command`, `args`, `version`,
-  `repository`, `token_env_var`) is already provider-agnostic — point it at
-  the new provider's own official MCP server.
-- **The credential chain** (global OS env var → MCP server process only) is
-  provider-agnostic; only the env var *name* changes per provider.
+- **The `launchdarkly:` config block shape** (`project_key`, `environments`,
+  `server_type`) is already provider-agnostic — a new provider adds its own
+  sibling top-level block of the same shape.
+- **The credential chain** is provider-agnostic and, as of Feature 013, lives
+  entirely outside this project's own config — the developer's own MCP
+  client and MCP server process own it completely; only the MCP server's
+  name/key (never a launch command or a credential) is saved, in
+  `local-config.yml`.
 
 ### What you need to change
 
@@ -153,13 +152,14 @@ would require, following the extension points already reserved in
    `Provider: <resolved provider display name>`, sourced from the resolved
    `provider` config value.
 
-4. **Generalize the hardcoded `"launchdarkly"` entry key in `connect`.**
-   [commands/connect.md](../commands/connect.md) ("Locate or Create
-   LaunchDarkly Entry") currently writes the MCP server entry under the
-   literal key `"launchdarkly"` in the client's MCP config file. Generalize
-   this to key off the resolved `provider` config value (e.g., `"unleash"`),
-   so `connect` can register whichever provider is configured — including
-   projects that might one day run more than one.
+4. **Generalize the hardcoded `"launchdarkly"` provider name in the wizard.**
+   [commands/config.md](../commands/config.md) (Step 1, Provider Selection)
+   currently presents only "LaunchDarkly" as selectable, per FR-003's V1
+   scope. Generalize this to present every provider with a real preset,
+   sourced from a provider registry (vision.md §11 point 2), rather than a
+   single hardcoded name — and generalize
+   [commands/provider.md](../commands/provider.md)'s single-preset
+   assumption ("in V1, only `launchdarkly` has a real preset") accordingly.
 
 5. **Add an optional provider-specific advisory note, if truly needed.**
    Per vision.md §11 point 3 ("modular doctrine: provider-neutral rollout

@@ -6,6 +6,18 @@
 
 **Status**: Draft
 
+> **Superseded acceptance criteria (Feature 013, `013-rollout-config-wizard`)**:
+> this spec's flat, single-provider `mcp.*` pinned-reference schema (launch
+> command, args, version, repository, token env-var name) was permanently
+> removed and replaced by a modular per-provider schema with no MCP
+> registration fields at all — that selection now lives in
+> `local-config.yml`, populated by `speckit.rollout.config`/
+> `speckit.rollout.provider` instead of the removed `speckit.rollout.connect`.
+> Every acceptance scenario, functional requirement, and key entity below
+> that assumed the `mcp.*` block is annotated inline as superseded; the
+> historical text itself is left unchanged as a record of what this feature
+> originally delivered.
+
 **Input**: User description: "Read docs/foundation/vision.md first (sections 6.2, 7, 8, 5.3). Specify the configuration system for the rollout extension. Provide rollout-config.template.yml containing NON-SECRET pointers only (provider, LaunchDarkly project key/environments, a canonical pinned MCP server reference, token_env_var name, hooks.enabled toggle). Document the config layering (extension defaults -> rollout-config.yml -> rollout-config.local.yml (gitignored) -> SPECKIT_ROLLOUT_* env vars). Template must warn against committing secrets and clarify the agent must never read/echo the token. Config must be readable by gate scripts and briefing commands at the resolved location .specify/extensions/rollout/rollout-config.yml."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -35,6 +47,10 @@ placeholders that would break parsing.
    (provider identifier, LaunchDarkly project key and environment name
    placeholders, the pinned MCP server reference, and the token environment
    variable name).
+
+   > **Superseded by Feature 013**: the template no longer contains a
+   > pinned MCP server reference or token environment variable name at
+   > all — those fields were removed, not merely relocated.
 2. **Given** the copied configuration file, **When** any tool or doctrine
    reads it, **Then** no field contains an actual credential, token, or
    secret value anywhere in the file.
@@ -138,6 +154,10 @@ control by default.
   project key placeholder, a list of environment name placeholders, a
   canonical pinned MCP server reference, and the name of the environment
   variable the MCP server reads for its access token.
+
+  > **Superseded by Feature 013**: the pinned MCP server reference and
+  > token env-var name clauses no longer apply — the template carries no
+  > MCP registration field of any kind.
 - **FR-002**: The `provider` field MUST be structured so that adding a future
   provider (e.g., Unleash, GrowthBook) requires only a new value for this
   field and adjacent provider-specific pointer fields, not a schema
@@ -146,10 +166,18 @@ control by default.
   launcher command, its arguments, a version constraint, and the source
   repository URL, so the doctrine can instruct the agent to use exactly this
   server (per vision.md 6.2) without searching for alternatives.
+
+  > **Superseded by Feature 013**: there is no pinned MCP server reference
+  > in config anymore; the doctrine instead resolves the developer's own
+  > already-registered server via live introspection.
 - **FR-004**: The template MUST include a field naming the operating-system
   environment variable that the MCP server process reads for its access
   token (e.g., `LAUNCHDARKLY_ACCESS_TOKEN`). This field MUST hold only the
   variable's name, never a token value.
+
+  > **Superseded by Feature 013**: no such field exists in the schema
+  > anymore; the token concept was removed from this project's config
+  > entirely, not merely renamed.
 - **FR-005**: The template MUST include a toggle (`hooks.enabled`, boolean,
   default `true`) that, when set to `false`, disables all rollout hooks for
   the team using that configuration.
@@ -207,6 +235,11 @@ control by default.
   launch the official provider MCP server (command, arguments, version
   constraint, repository URL) and which environment variable it reads for
   its token.
+
+  > **Superseded by Feature 013**: this entity no longer exists in the
+  > schema. The developer's own client owns MCP server registration
+  > entirely; this project only stores that server's name/key (in
+  > `local-config.yml`), never its launch details or a credential.
 - **Hooks Toggle**: The single boolean setting controlling whether any
   rollout hook produces doctrine output for a given team/project.
 
@@ -267,6 +300,11 @@ control by default.
   feature).
 - Writing or registering the MCP server connection with any Spec Kit client
   (delivered in the `connect` setup feature).
+
+  > **Superseded by Feature 013**: the `connect` setup feature named here
+  > was permanently removed and replaced by `speckit.rollout.config`/
+  > `speckit.rollout.provider`, which never write a client's MCP
+  > configuration file at all (by design, not merely a rename).
 - Any provider other than LaunchDarkly (future roadmap item; this feature
   only guarantees the schema is pluggable).
 - Automated secret-scanning or pre-commit enforcement preventing accidental

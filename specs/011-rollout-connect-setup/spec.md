@@ -6,11 +6,27 @@
 
 **Status**: Draft
 
+> **Fully superseded/removed by Feature 013** (`013-rollout-config-wizard`):
+> the `speckit.rollout.connect` command specified by this entire feature —
+> including `commands/connect.md`, its client-MCP-configuration-file-write
+> behavior, and every acceptance scenario and functional requirement below
+> that relies on writing a pinned LaunchDarkly MCP server spec into a
+> client's own MCP configuration file — was permanently removed, not
+> deprecated-alongside (FR-001, FR-002 of Feature 013). It is replaced by
+> `speckit.rollout.config`/`speckit.rollout.provider`, which never write to
+> any client's MCP configuration file at all; the developer registers their
+> own MCP server themselves. User Stories 1-3 below (all reliant on the
+> removed write/fallback/idempotent-update behavior) and every FR/SC that
+> assumed it are superseded in full. Historical text is left unchanged as a
+> record of what this feature originally delivered.
+
 **Input**: User description: "Read docs/foundation/vision.md first (sections 6.2, 7, 8). Specify commands/connect.md — the one-time setup command speckit.rollout.connect (user-invoked, not a day-2 operational command). Requirements: Read the active Spec Kit integration; derive the target client from Spec Kit's own integration catalog so coverage tracks all supported clients (Copilot, Claude Code, Cline, Cursor, Windsurf, Gemini CLI, Codex, etc.). Write the correct MCP server registration for that client from the canonical pinned server spec in config (Feature 2), referencing the token via its env-var NAME only. For clients without a known MCP config location, or that lack project-scoped MCP config, print a ready-to-paste snippet plus an env-var reminder. Idempotent; never writes the token value; never overwrites unrelated MCP entries. Maintain a per-integration adapter mapping (config file path + format) that is easy to extend for new clients. Acceptance criteria: Running connect on a supported client writes/updates that client's MCP config with the pinned LaunchDarkly MCP server. Running connect on an unmapped client prints a correct copy-paste snippet. Re-running connect is idempotent and preserves other MCP servers. No token value is ever written. Out of scope: launching the MCP or storing credentials."
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - One-time MCP setup for a supported client (Priority: P1)
+
+> **Superseded/removed by Feature 013** — see notice at top of file.
 
 A developer has installed the `rollout` extension into a project that uses a
 Spec Kit client integration the extension already knows how to configure
@@ -51,6 +67,8 @@ configuration, with no token value present anywhere in the file.
 
 ### User Story 2 - Copy-paste fallback for an unmapped or config-less client (Priority: P2)
 
+> **Superseded/removed by Feature 013** — see notice at top of file.
+
 A developer's project uses a Spec Kit client integration that the `rollout`
 extension's adapter mapping does not yet cover, or whose Spec Kit integration
 has no project-scoped MCP configuration mechanism at all. They run
@@ -85,6 +103,8 @@ MCP server snippet plus the token environment-variable name to set.
 ---
 
 ### User Story 3 - Idempotent re-run preserves existing configuration (Priority: P1)
+
+> **Superseded/removed by Feature 013** — see notice at top of file.
 
 A developer who already ran `/speckit.rollout.connect` once (User Story 1)
 runs it again later — for example after reinstalling the extension, updating
@@ -138,6 +158,11 @@ pre-existing unrelated entries and file structure otherwise unchanged.
   which it was invoked, not on every integration present in the project.
 
 ## Requirements *(mandatory)*
+
+> **Superseded/removed by Feature 013**: FR-001 through FR-011 below all
+> assumed the now-permanently-removed `speckit.rollout.connect` command and
+> its client-MCP-configuration-file-write behavior — see notice at top of
+> file.
 
 ### Functional Requirements
 
@@ -202,6 +227,10 @@ pre-existing unrelated entries and file structure otherwise unchanged.
   rendered as a snippet for, a client's MCP configuration.
 
 ## Success Criteria *(mandatory)*
+
+> **Superseded/removed by Feature 013**: SC-001 through SC-004 below all
+> assumed the now-permanently-removed `speckit.rollout.connect` command —
+> see notice at top of file.
 
 ### Measurable Outcomes
 
