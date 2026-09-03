@@ -71,22 +71,27 @@ flowchart LR
     Gate -->|marker present| Doctrine["full phase doctrine injected\n(Delivery Strategy, rollout tasks, MCP actions…)"]
 ```
 
-The **only** thing you ever run by hand is the one-time setup command,
-`speckit.rollout.connect` — see [Quick Start](#quick-start) below.
+The **only** things you ever run by hand are the guided setup wizard,
+`speckit.rollout.config`, and its companion switch command,
+`speckit.rollout.provider` — see [Quick Start](#quick-start) below.
 
 ## Quick Start
 
 1. **Install** the extension into a Spec Kit-initialized project (see
    [Installation](#installation) below).
-2. **Connect once**, so the LaunchDarkly MCP server is registered for your
-   client:
+2. **Register the official LaunchDarkly MCP server yourself**, in your own
+   client's native MCP settings (e.g. `.vscode/mcp.json`) — `rollout` never
+   writes, creates, or modifies that file for you.
+3. **Run the setup wizard once**, so your project/environment selection is
+   saved:
    ```
-   /speckit.rollout.connect
+   /speckit.rollout.config
    ```
-   This writes the MCP entry (never the token value — see
-   [Configuration](#configuration)) into your client's MCP config, or prints a
-   copy-paste snippet if your client isn't project-scope-aware yet.
-3. **Use Spec Kit exactly as before.** Describe a feature with
+   This discovers whichever MCP server(s) you've already registered,
+   determines hosted vs. local automatically, and writes a
+   `provider: launchdarkly` config block (never the token value — see
+   [Configuration](#configuration)) to `rollout-config.yml`.
+4. **Use Spec Kit exactly as before.** Describe a feature with
    `/speckit.specify`, and if it looks like a progressive-delivery candidate
    (payments, auth, a risky migration, a percentage/cohort mention, …),
    `rollout` proposes a `## Delivery Considerations` section — you can accept
@@ -107,11 +112,12 @@ specify extension add <path-or-url-to-rollout> --dev
 
 ## What it provides
 
-- **8 commands** (namespace `speckit.rollout.*`): seven phase briefings
+- **9 commands** (namespace `speckit.rollout.*`): seven phase briefings
   (`brief-specify`, `brief-clarify`, `brief-plan`, `brief-tasks`,
-  `brief-analyze`, `brief-checklist`, `brief-implement`) plus a one-time
-  `connect` setup command. **Only `connect` is meant to be invoked directly** —
-  the seven briefings exist solely as hook targets (see above).
+  `brief-analyze`, `brief-checklist`, `brief-implement`) plus the guided
+  setup wizard (`config`) and the provider switch command (`provider`).
+  **Only `config`/`provider` are meant to be invoked directly** — the seven
+  briefings exist solely as hook targets (see above).
 - **7 lifecycle hooks** (`before_specify`, `before_clarify`, `before_plan`,
   `before_tasks`, `before_analyze`, `before_checklist`, `before_implement`),
   each non-optional, each running its corresponding briefing command

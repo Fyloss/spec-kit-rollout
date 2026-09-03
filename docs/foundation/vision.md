@@ -146,15 +146,25 @@ configured MCP at runtime and binds each intent to the real advertised tools.
 Adding a new provider later is near-zero maintenance: the generic doctrine works
 against any MCP; at most an optional advisory per-provider note is added.
 
-### 6.2 Pinned server reference (supply-chain safety)
+### 6.2 Config reference or live discovery (supply-chain safety)
 
-The extension config stores a **canonical, pinned reference** to the official
-LaunchDarkly MCP server (launcher command + args, version constraint, repository
-URL, and the token **env-var name** — never the value). The doctrine instructs
-the agent to use exactly this server and not to search for or substitute
-alternatives, preventing forks / typosquats / deprecated mirrors from receiving
-the token. The pin lives in config (editable, locally overridable) rather than
-code, so it can be updated without a release.
+As of Feature 013, the extension no longer stores a pinned launcher
+command/args/version/repository/token-env-var reference for the provider
+MCP server. Instead, the developer registers the **official** LaunchDarkly
+MCP server themselves, of their own choosing, directly in their own Spec
+Kit client's native MCP settings (e.g. `.vscode/mcp.json`) — `rollout` never
+writes, creates, or modifies that file. The `speckit.rollout.config` wizard
+discovers whichever MCP server(s) the developer has already registered,
+read-only, and the doctrine instructs the agent to use exactly the
+developer's selected, already-registered server — never to search for or
+substitute an alternative, forked, or typosquatted implementation.
+Constitution Principle IV (v2.0.0) permits binding to an official provider
+MCP server via **either** a single pinned config reference **or** this live
+introspection-based discovery of the developer's own already-registered
+server, re-verified fresh on every invocation (never cached) — this
+extension uses the latter mode. Only the selected server's name/key (never
+its launch command, arguments, version, repository, or a credential) is
+saved, under the literal, flat key `mcp_server`, in `local-config.yml` (§8).
 
 ### 6.3 Graceful degradation
 
@@ -162,20 +172,43 @@ If no MCP is available, the agent runs in **plan-only mode**: it still documents
 the Delivery Strategy and emits a "configure MCP / run setup" task, so the
 workflow never hard-fails.
 
-## 7. Setup Command (`speckit.rollout.connect`)
+## 7. Setup Command (`speckit.rollout.config` / `speckit.rollout.provider`)
 
-MCP registration is client-specific — there is no universal MCP config file.
-`connect` is a **one-time setup command** (distinct from day-2 operational
-commands, which are intentionally excluded — see Decision D2). It:
+MCP registration is client-specific and is now the developer's own
+responsibility, done once in their own client's native MCP settings, before
+running any `rollout` command — `rollout` itself never writes, creates, or
+modifies a client's MCP configuration file (superseding Feature 011's
+`connect` command, which is permanently removed, not deprecated-alongside).
 
-1. Reads the active Spec Kit integration (derived from Spec Kit's own integration
-   catalog so coverage tracks all supported clients — Copilot, Claude Code, Cline,
-   Cursor, Windsurf, Gemini CLI, Codex, etc.).
-2. Writes the correct MCP registration for that client from the canonical pinned
-   server spec.
-3. Falls back to a copy-paste snippet + env-var reminder for clients without a
-   known MCP location or that don't support project-scoped MCP config.
-4. Is idempotent and **never writes the token** — only references the env-var name.
+`speckit.rollout.config` is a **re-runnable, interactive setup wizard**
+(distinct from day-2 operational commands, which remain intentionally
+excluded — see Decision D2) that:
+
+1. Discovers, read-only, whichever MCP server(s) the developer has already
+   registered in their own client, and resolves to exactly one (stopping
+   safely with guidance if zero are found, or asking the developer to
+   disambiguate if more than one is found).
+2. Automatically determines — never asking the developer directly — whether
+   the selected server is LaunchDarkly's **hosted** server or a **local**
+   one, via a live, read-only, never-cached probe re-verified on every run.
+3. Walks the developer through project/environment selection appropriate to
+   that server type (live introspected selection for hosted; manual entry
+   or explicit opt-out, with no fabricated placeholders, for local).
+4. Performs a read-only read-verification check, then requires an explicit
+   final confirmation before writing anything.
+5. Writes exactly one modular `provider: launchdarkly` + `launchdarkly:`
+   config block to `rollout-config.yml` — never an MCP command/args/
+   version/repository/token-env-var field, since that concept no longer
+   exists (§6.2, §8).
+
+It is safely re-runnable any number of times, changing only the selections
+the developer chooses to change, and it never writes a credential value.
+
+The sibling `speckit.rollout.provider <provider_name>` command lets a
+developer switch the active `provider:` value — reusing an already-saved
+config block with zero re-prompting, or triggering that provider's own
+config preset (LaunchDarkly is the only real preset in V1) if none exists
+yet — without re-running the whole wizard.
 
 Client-agnostic core = one canonical server spec; client-specific = a small
 per-integration adapter table (the same pattern Spec Kit uses for integrations).
@@ -187,9 +220,17 @@ per-integration adapter table (the same pattern Spec Kit uses for integrations).
   token, so it never enters the model context or reaches any cloud model. This is
   simultaneously the simplest and the most secure option, and it is fully
   client-agnostic (every Spec Kit client spawns MCP servers with inherited env).
-- Committed config holds **non-secret pointers only** (provider id, project key,
-  environment names, the expected env-var name). Never the value.
-- The doctrine forbids the agent from reading, echoing, or inlining the token.
+- Committed config (`rollout-config.yml`) holds **non-secret pointers only**
+  (provider id, project key, environment names, and the informational,
+  never-cached `server_type` determination) — never a token, and, as of
+  Feature 013, no MCP launcher field of any kind (`mcp.command`/`args`/
+  `version`/`repository`/`token_env_var` no longer exist in this schema at
+  all). The developer's chosen MCP server's name/key (never its launch
+  details or a credential) is saved separately, under the literal, flat key
+  `mcp_server`, in `.specify/extensions/rollout/local-config.yml`.
+- The doctrine forbids the agent from reading, echoing, or inlining the token —
+  reinforced by having no token-related field left in this project's own config
+  to even inadvertently reference.
 - Recommend a **scoped, least-privilege** LaunchDarkly token.
 - **Rejected for V1:** editor secret stores (e.g., VS Code `SecretStorage`) — not
   client-agnostic, and risk exposing the secret if read into context; encrypted
@@ -232,7 +273,9 @@ required. A standalone `rollout.md` is a future consideration behind a config fl
 - Seven `before_*` self-gating hooks + briefing/doctrine command bodies.
 - Provider access via the official LaunchDarkly MCP + runtime introspection
   (no wrapper, no capability contract).
-- `speckit.rollout.connect` setup command with integration-derived client adapters.
+- `speckit.rollout.config` guided setup wizard (re-runnable) and
+  `speckit.rollout.provider` switch/preset command; no per-client adapter
+  table, no client MCP configuration file is ever written (Feature 013).
 - `Delivery Considerations` marker (spec) and `Delivery Strategy` section (plan),
   embedded in standard artifacts.
 - Credential resolution via a global OS env var consumed by the MCP server.
@@ -265,11 +308,18 @@ Spec Kit **bundle**, one command).
 5. `connect` adapter table extends per new client automatically from Spec Kit
    integrations.
 
+   > **Superseded by Feature 013**: the `connect` command and its
+   > per-client adapter table were permanently removed. Client coverage is
+   > now automatic and adapter-free — `speckit.rollout.config` discovers
+   > whichever MCP server the developer already registered in their own
+   > client, regardless of which client that is, via generic MCP
+   > introspection rather than a per-client mapping.
+
 ## 12. Proposed Extension Layout
 
 ```
 spec-kit-rollout/
-├── extension.yml                 # manifest: 7 before_* hooks, connect command, config
+├── extension.yml                 # manifest: 7 before_* hooks, config + provider commands
 ├── README.md / LICENSE / CHANGELOG.md
 ├── commands/
 │   ├── brief-specify.md          # detection doctrine + marker instructions
@@ -279,13 +329,14 @@ spec-kit-rollout/
 │   ├── brief-analyze.md          # rollout-chain consistency checks
 │   ├── brief-checklist.md        # rollout-quality checklist items
 │   ├── brief-implement.md        # MCP introspection + provider actions + guardrails
-│   └── connect.md                # one-time MCP setup, client-agnostic
+│   ├── config.md                 # re-runnable guided setup wizard (Feature 013)
+│   └── provider.md               # provider switch/preset command (Feature 013)
 ├── scripts/
 │   ├── bash/rollout-gate.sh      # marker detection (state gate)
 │   └── powershell/rollout-gate.ps1
 ├── templates/
 │   └── rollout-section.md        # OPTIONAL Delivery Strategy structure
-└── rollout-config.template.yml   # provider, project/env keys, pinned MCP spec, token env-var name (no secrets)
+└── rollout-config.template.yml   # provider, modular per-provider project/env/server_type block (no MCP launcher fields, no secrets)
 ```
 
 ## 13. Decision Log (research conclusions & rationale)
@@ -301,8 +352,9 @@ spec-kit-rollout/
   SDD artifacts, not runtime operations. Live flag control belongs to the provider
   (dashboard + MCP tools). Re-exposing it would duplicate provider capabilities
   and add drift. The agent can already perform provider actions during
-  `/speckit.implement` via MCP. (The `connect` setup command is a one-time
-  wiring action, not day-2 ops, and is retained.)
+  `/speckit.implement` via MCP. (`speckit.rollout.config`/`speckit.rollout.provider`
+  are one-time-or-occasional setup/switch actions, not day-2 ops, and are
+  retained on that same basis.)
 - **D3 — Official MCP + introspection, no wrapper / no contract.** MCP's
   `tools/list` is a standard, always-fresh capability source; a maintained
   contract would go stale and cost maintenance per provider. Provider-neutral

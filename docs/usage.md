@@ -11,8 +11,9 @@ workflow you already run, day to day. For the underlying design rationale, see
 > feature. You just describe the feature normally, and `rollout` decides —
 > transparently, via a marker in `spec.md` — whether to get involved.
 
-The only command you ever type yourself is the one-time setup command,
-`speckit.rollout.connect`. Everything else is standard Spec Kit:
+The only commands you ever type yourself are the setup wizard,
+`speckit.rollout.config`, and its companion switch command,
+`speckit.rollout.provider`. Everything else is standard Spec Kit:
 
 ```mermaid
 sequenceDiagram
@@ -20,9 +21,9 @@ sequenceDiagram
     participant SpecKit as Spec Kit
     participant Rollout as rollout hooks (silent)
 
-    Note over You,Rollout: One-time, per project
-    You->>SpecKit: /speckit.rollout.connect
-    SpecKit->>Rollout: registers LaunchDarkly MCP server
+    Note over You,Rollout: One-time, per project (you register the MCP server yourself first)
+    You->>SpecKit: /speckit.rollout.config
+    SpecKit->>Rollout: discovers your registered LaunchDarkly MCP server,\ndetermines hosted/local, saves project/environment selection
 
     Note over You,Rollout: Normal, repeated per feature
     You->>SpecKit: /speckit.specify "add payment refunds"
@@ -47,36 +48,55 @@ sequenceDiagram
 
 ## Step-by-step
 
-### 1. Install and connect (once per project)
+### 1. Register your MCP server, then run the wizard once per project
 
 ```bash
 specify extension add <path-or-url-to-rollout> --dev
 ```
 
-Then, inside your Spec Kit client:
-
-```
-/speckit.rollout.connect
-```
-
-`connect`:
-- detects your active Spec Kit client (Copilot, Claude Code, Cursor, Cline,
-  Gemini CLI, Codex, …),
-- writes the pinned LaunchDarkly MCP server entry into that client's MCP
-  config file (or prints a copy-paste snippet if your client doesn't support
-  project-scoped MCP config yet),
-- **never writes a credential value** — only the name of the environment
-  variable the MCP server reads at launch.
-
-You still need to export the actual token yourself, once, in your shell
-profile (see [providers.md](providers.md#credentials)):
+First, register the **official** LaunchDarkly MCP server yourself, in your
+own Spec Kit client's native MCP settings (e.g. `.vscode/mcp.json`) —
+`rollout` never writes, creates, or modifies that file (vision.md §6.2).
+Export the actual token yourself, once, in your shell profile (see
+[providers.md](providers.md#credentials)):
 
 ```bash
 export LAUNCHDARKLY_API_TOKEN="..."
 ```
 
-Re-running `connect` at any time is safe — it's idempotent and only touches
-the `launchdarkly` entry it owns.
+Then, inside your Spec Kit client:
+
+```
+/speckit.rollout.config
+```
+
+`speckit.rollout.config`:
+- discovers, read-only, whichever LaunchDarkly-capable MCP server(s) you've
+  already registered (stopping safely with guidance if it finds none, or
+  asking you to pick if it finds more than one),
+- automatically determines — without asking — whether your selected server
+  is LaunchDarkly's **hosted** server or a **local** one,
+- walks you through project/environment selection (live selection for a
+  hosted server; manual entry or explicit opt-out for a local one),
+- verifies read access, shows a full summary, and — only once you
+  explicitly confirm — writes a `provider: launchdarkly` +
+  `launchdarkly:` block to `rollout-config.yml`,
+- **never writes a credential value**, and **never touches your client's
+  own MCP configuration file**.
+
+Re-running `speckit.rollout.config` at any time is safe — it always shows
+your current selections first and lets you change any of them.
+
+Already configured a provider and want to switch or add another one
+without re-running the whole wizard?
+
+```
+/speckit.rollout.provider <provider_name>
+```
+
+This reuses an existing saved block for `<provider_name>` with zero
+re-prompting, or triggers that provider's own config preset if none exists
+yet.
 
 ### 2. Work normally — `/speckit.specify`
 
@@ -133,8 +153,9 @@ validation, define rollback conditions.
 
 ### 7. `/speckit.implement` — real provider actions
 
-If rollout tasks exist, `before_implement` introspects the pinned LaunchDarkly
-MCP server (`tools/list`, `resources/list`, `prompts/list`) and executes the
+If rollout tasks exist, `before_implement` introspects the LaunchDarkly MCP
+server you registered and selected via `speckit.rollout.config`
+(`tools/list`, `resources/list`, `prompts/list`) and executes the
 create-flag / configure-environments / configure-targeting actions using the
 parameters from `plan.md` and `tasks.md`. Two guardrails are always enforced:
 
@@ -142,8 +163,9 @@ parameters from `plan.md` and `tasks.md`. Two guardrails are always enforced:
   explicitly specifies, unless you say so explicitly in that session;
 - it **never** reads, echoes, or logs the API token value.
 
-If no MCP server is reachable, it falls back to plan-only mode and records a
-single task pointing at `/speckit.rollout.connect`.
+If no MCP server or no configured project/environment is available, it
+falls back to plan-only mode and records a single task pointing at
+`/speckit.rollout.config`.
 
 ## What "near-zero noise" looks like
 
@@ -175,5 +197,5 @@ you'd get without `rollout` installed at all.
 |---|---|---|
 | No `Delivery Considerations` proposed for an obviously risky feature | Description didn't match any heuristic strongly enough | Mention the risk/cohort explicitly, or add the section by hand — the marker format is documented in [foundation/vision.md](foundation/vision.md) §5.1 |
 | `brief-implement` says "no rollout tasks found" | `tasks.md` was generated before `Delivery Strategy` existed in `plan.md` | Re-run `/speckit.tasks` |
-| `connect` prints a copy-paste snippet instead of writing a file | Your client isn't in the adapter table, or doesn't support project-scoped MCP config | Paste the snippet manually into your client's MCP config |
-| MCP actions skipped during `/speckit.implement` | MCP server unreachable (token not exported, wrong pin) | Export the token env var, verify `rollout-config.yml`'s `mcp.*` block, re-run `/speckit.rollout.connect` |
+| `speckit.rollout.config` says no LaunchDarkly-capable MCP server was detected | You haven't registered the official LaunchDarkly MCP server in your client yet | Register it yourself in your client's own MCP settings (e.g. `.vscode/mcp.json`), then re-run `/speckit.rollout.config` |
+| MCP actions skipped during `/speckit.implement` | No MCP server selection saved, or project/environment not yet configured (local-branch opt-out) | Run `/speckit.rollout.config` to select your MCP server and set a project/environment(s) |

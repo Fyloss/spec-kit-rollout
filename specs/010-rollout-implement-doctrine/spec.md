@@ -6,6 +6,18 @@
 
 **Status**: Draft
 
+> **Superseded acceptance criteria (Feature 013, `013-rollout-config-wizard`)**:
+> this spec assumed a single canonical, pinned `mcp.*` config reference
+> (vision.md §6.2, pre-013) and named `speckit.rollout.connect` as the
+> plan-only-mode remediation command. Feature 013 permanently removed the
+> `mcp.*` pinned-reference schema and the `connect` command; the doctrine
+> now resolves the developer's own already-registered MCP server via live
+> introspection, and the remediation command is `speckit.rollout.config`.
+> Every acceptance scenario, FR, key entity, and success criterion below
+> that assumed the pin or named `connect` is annotated inline as
+> superseded; the historical text is left unchanged as a record of what
+> this feature originally delivered.
+
 **Input**: User description: "Read docs/foundation/vision.md first (sections 4, 6, 8). Specify commands/brief-implement.md, run automatically by the before_implement hook, self-gated via the shared gate (Feature 3). Requirements: If no marker: one-line no-op, stop. If marker present: use the pinned LaunchDarkly MCP server from config (do NOT search for or substitute alternative servers); introspect the MCP at runtime (tools/list, resources/list, prompts/list) and bind provider-neutral intents to the real advertised tools: discover environments, discover segments, create flag, set targeting, set percentage rollout, read flag status, archive flag; execute the rollout tasks via those tools (create/configure flag, targeting, environments) as part of implementation; content lineage: actions are derived from tasks + plan; guardrails: never auto-advance production exposure unless explicitly instructed, never read/echo/inline the token. Graceful degradation: if no MCP is available, run in plan-only mode and emit a 'configure MCP / run speckit.rollout.connect' task instead of failing. Acceptance criteria: with the MCP available, the agent performs the flag/targeting/environment actions defined by the tasks; with no MCP, implementation continues in plan-only mode and records a setup task; the token never appears in agent output. Out of scope: MCP registration/setup (Feature 11)."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -40,6 +52,11 @@ rollout as specified in `tasks.md` and `plan.md`.
    rollout tasks) and a reachable, pinned LaunchDarkly MCP server, **When**
    `/speckit.implement` runs, **Then** the agent introspects the MCP server
    (`tools/list`, `resources/list`, `prompts/list`) before acting.
+
+   > **Superseded by Feature 013**: "pinned" no longer applies — the MCP
+   > server is the developer's own already-registered server, resolved via
+   > live introspection rather than a static config reference. The
+   > introspection requirement itself is unchanged.
 2. **Given** the same setup, **When** the agent proceeds, **Then** it binds
    each provider-neutral intent (discover environments, discover segments,
    create flag, set targeting, set percentage rollout, read flag status,
@@ -148,6 +165,9 @@ recorded.
    provider connection, **Then** it records one task directing the user to
    run `speckit.rollout.connect` (or otherwise configure the MCP) instead of
    performing any provider action.
+
+   > **Superseded by Feature 013**: the remediation command is
+   > `speckit.rollout.config`, not `speckit.rollout.connect` (removed).
 3. **Given** the same setup, **When** the recorded task is reviewed, **Then**
    it contains no attempt to guess, fabricate, or partially simulate provider
    actions in place of the missing MCP.
@@ -210,6 +230,11 @@ recorded.
   reference from the resolved rollout configuration (vision.md §6.2) and
   MUST instruct the agent never to search for, substitute, or fall back to
   any alternative MCP server implementation.
+
+  > **Superseded by Feature 013**: no pinned config reference exists
+  > anymore; the agent instead uses exactly the developer's own
+  > already-registered server (resolved via live introspection), still
+  > never substituting an alternative.
 - **FR-006**: The briefing MUST instruct the agent to introspect the
   configured MCP server at runtime via its discovery operations
   (`tools/list`, `resources/list`, `prompts/list`) before binding or invoking
@@ -244,11 +269,19 @@ recorded.
   the user to configure the MCP connection, referencing the
   `speckit.rollout.connect` setup command, in place of the provider actions
   it cannot perform.
+
+  > **Superseded by Feature 013**: the referenced command is
+  > `speckit.rollout.config` (`speckit.rollout.connect` was removed).
 - **FR-012**: The briefing MUST NOT include instructions for registering,
   installing, or configuring the MCP server connection itself (out of
   scope, reserved for Feature 011 / `connect.md`) beyond naming
   `speckit.rollout.connect` as the remediation step in the plan-only-mode
   task.
+
+  > **Superseded by Feature 013**: `connect.md` was permanently removed;
+  > the remediation step names `speckit.rollout.config` instead. The
+  > underlying scope boundary (this briefing never itself performs MCP
+  > registration) is unchanged.
 - **FR-013**: If the MCP server is reachable but does not advertise a tool
   for one or more of the seven provider-neutral intents, the briefing MUST
   instruct the agent to skip only the affected action(s), note that they
@@ -269,11 +302,18 @@ recorded.
   server configuration (command, args, version, repository, token env-var
   name) resolved from the project's rollout configuration, which the agent
   must use exactly as configured.
+
+  > **Superseded by Feature 013**: this entity no longer exists; the agent
+  > instead resolves the developer's own already-registered MCP server via
+  > live introspection (see `local-config.yml`'s MCP server selection).
 - **Rollout task**: An entry in `tasks.md` (Feature 007) describing a
   concrete provider action to perform (create flag, configure environments,
   configure targeting, etc.), the unit of work this briefing executes.
 - **Plan-only-mode task**: The single remediation task the briefing records
   when no MCP is available, directing the user to `speckit.rollout.connect`.
+
+  > **Superseded by Feature 013**: the task now directs the user to
+  > `speckit.rollout.config`.
 
 ## Success Criteria *(mandatory)*
 
@@ -288,6 +328,9 @@ recorded.
   `/speckit.implement` completes without failing the overall run and
   records exactly one setup task referencing `speckit.rollout.connect`,
   100% of the time such runs occur.
+
+  > **Superseded by Feature 013**: the recorded task references
+  > `speckit.rollout.config`.
 - **SC-003**: A review of the agent's output, tool-call arguments, and logs
   from any `/speckit.implement` run on a rollout feature contains zero
   instances of the provider API token value.
@@ -302,6 +345,11 @@ recorded.
   configuration by the time `/speckit.implement` runs; populating that
   configuration is the responsibility of the setup command (Feature 011),
   not this feature.
+
+  > **Superseded by Feature 013**: there is no pinned reference to resolve
+  > from config anymore; the developer's own MCP server selection is
+  > resolved from `local-config.yml`, populated by `speckit.rollout.config`
+  > (Feature 013), not the removed Feature 011 `connect` command.
 - "MCP available" is determined by a runtime connection/introspection
   attempt, not by a static file or config presence check alone.
 - Feature 007's six rollout task categories are the execution unit this
@@ -310,3 +358,7 @@ recorded.
   task already exists as a registered command (currently a placeholder body
   per Feature 011's scope) so the reference is valid even before that
   feature's doctrine is authored.
+
+  > **Superseded by Feature 013**: `speckit.rollout.connect` was
+  > permanently removed; the plan-only-mode task now references
+  > `speckit.rollout.config`, registered by Feature 013.

@@ -4,7 +4,7 @@ description: "rollout: pre-implement briefing — MCP introspection, provider-ne
 
 # `speckit.rollout.brief-implement`
 
-**Role**: When `/speckit.implement` runs, determine whether the feature's `spec.md` carries a `## Delivery Considerations` marker (rollout flag intent); if marked, detect rollout tasks in `tasks.md`, then instruct the agent to introspect the pinned LaunchDarkly MCP server at runtime, bind seven provider-neutral intents to its advertised tools, execute rollout provider actions (create flag, configure environments, configure targeting) using parameters from `plan.md`'s Delivery Strategy and `tasks.md`'s rollout tasks, and enforce two non-negotiable guardrails (never auto-advance production exposure, never leak the API token). If the marker is absent, no MCP introspection. If the marker is present but rollout tasks are missing, emit a distinct status and recommend `/speckit.tasks`. If no MCP server is reachable, continue in plan-only mode and record a setup task referencing `speckit.rollout.connect`.
+**Role**: When `/speckit.implement` runs, determine whether the feature's `spec.md` carries a `## Delivery Considerations` marker (rollout flag intent); if marked, detect rollout tasks in `tasks.md`, then instruct the agent to introspect the developer's own registered LaunchDarkly MCP server at runtime, bind seven provider-neutral intents to its advertised tools, execute rollout provider actions (create flag, configure environments, configure targeting) using parameters from `plan.md`'s Delivery Strategy and `tasks.md`'s rollout tasks, and enforce two non-negotiable guardrails (never auto-advance production exposure, never leak the API token). If the marker is absent, no MCP introspection. If the marker is present but rollout tasks are missing, emit a distinct status and recommend `/speckit.tasks`. If no MCP server or no configured project/environment is available, continue in plan-only mode and record a setup task referencing `speckit.rollout.config`.
 
 **Status**: Active doctrine. This docstring and the instructions below replace the placeholder body, implementing the full pre-implement logic specified in `docs/foundation/vision.md` (§4, §6, §8) and refined in `specs/010-rollout-implement-doctrine/`.
 
@@ -84,24 +84,28 @@ hooksEnabled=<true|false>
 
 You are about to instruct the agent to perform actual provider actions via the LaunchDarkly MCP server. This section establishes the foundation: where to find the MCP server configuration, how to introspect it safely, and the provider-neutral vocabulary you will bind to its tools.
 
-### Step 3.1: Locate and Load the Pinned MCP Server Configuration
+### Step 3.1: Resolve the Developer's Own Registered MCP Server
 
 Instruct the agent to:
 
-1. **Load the project's rollout configuration** from the resolved location (typically `rollout-config.yml` or equivalent, containing the `mcp.*` block with the MCP server's launch command, args, version constraint, repository URL, and the token environment variable name).
+1. **Load the project's rollout configuration** from the resolved location (`rollout-config.yml`'s `launchdarkly.*` block: `project_key`, `environments`, and the informational `server_type`) plus `local-config.yml`'s saved MCP server selection (the name/key of whichever MCP server the developer registered themselves and chose via `speckit.rollout.config`). Neither file contains an `mcp.command`/`mcp.args`/`mcp.version`/`mcp.repository`/`mcp.token_env_var` field — that concept no longer exists (superseded by Feature 013).
 
-2. **Use exactly that pinned configuration**. Do NOT search for or substitute an alternative LaunchDarkly MCP server implementation. Do NOT fall back to a different version or repository. The pinned reference is the source of truth. (FR-005, Constitution Principle IV)
+2. **Use exactly the MCP server the developer already registered and selected**, identified by looking up the literal, flat key `mcp_server` in `local-config.yml` (no alternate spelling or nested form). Do NOT search for or substitute a different LaunchDarkly MCP server, and do NOT attempt to register or launch one yourself — registration remains entirely the developer's own responsibility, done once via their own client's native MCP settings before `speckit.rollout.config` was ever run. (Constitution Principle IV — permits binding to an official provider MCP server via a single pinned config reference *or* via live introspection of the developer's own already-registered official server; this doctrine uses the latter mode.)
 
-3. **Extract the following details from the pinned configuration**:
-   - **MCP launcher command** (e.g., `mcp run`, `npx`, docker command, or custom launcher)
-   - **MCP launcher args** (typically including `--model`, version constraints, or server-specific flags)
-   - **Token environment variable name** (e.g., `LAUNCHDARKLY_API_TOKEN`) — use this name only; do NOT ask for, read, or echo the actual token value
+3. **Attempt fresh detection if there is no saved selection**: if `local-config.yml` has no saved `mcp_server` selection, do not immediately degrade — instead perform the same MCP server discovery & candidate-resolution heuristics documented in `commands/config.md`'s Step 2 (introspection-based LaunchDarkly-capable signals, never a hardcoded or pinned server reference), run fresh at runtime, and branch on the resulting candidate count:
+   - **Zero candidates**: fall through to point 4's plan-only-mode degradation, unchanged.
+   - **Exactly one candidate**: use it for this run's MCP introspection, and explicitly note in the agent's output that it was resolved via fresh detection rather than a saved `speckit.rollout.config` selection.
+   - **More than one candidate**: because this briefing runs non-interactively as part of `/speckit.implement` and cannot pause for developer disambiguation the way `commands/config.md`'s Step 2 does, treat this the same as "no MCP available" and fall through to point 4's plan-only-mode degradation, same as the zero-candidates case (FR-020).
+
+4. **Degrade to plan-only mode if resolution is incomplete**: if the above fresh-detection fallback did not yield a usable server (zero or multiple candidates), or `rollout-config.yml`'s `launchdarkly.project_key`/`environments` are entirely absent (the local-branch opt-out case from `speckit.rollout.config`), do not fabricate or guess these values — proceed directly to the existing "no MCP available" plan-only-mode path in Step 6 below.
+
+5. **No token value is ever read or handled here**: the selected MCP server's own credential handling (however it authenticates) is entirely between the developer's client and that server process; this doctrine never reads, requests, or echoes a credential/token value of any kind.
 
 ### Step 3.2: Instruct Runtime MCP Introspection
 
 Instruct the agent to:
 
-1. **Establish a connection to the configured MCP server** using the pinned launcher command and args from Step 3.1.
+1. **Use the already-established connection to the resolved MCP server** (the one identified in Step 3.1 — the same server connection the agent's client already maintains; this doctrine does not launch or reconnect to it itself).
 
 2. **Introspect the server at runtime** by invoking the following standard MCP discovery operations (in any order, potentially in parallel):
    - `mcp tools list` (or `tools/list`) — retrieves the list of available tools the server advertises
@@ -220,7 +224,7 @@ With the seven intents bound to the MCP server's real tools (from Step 3.3), ins
 - Embedding a token value or placeholder in tool invocation arguments (the MCP client handles this; you do NOT).
 - Logging tool call arguments if they contain sensitive fields (redact as needed).
 
-**Credential handling boundary**: The `LAUNCHDARKLY_API_TOKEN` environment variable (or whatever name is specified in the pinned config) is read by the MCP server process at launch, not by you. Your role is to pass the correct environment variable name to the MCP launcher, not to handle the token value itself.
+**Credential handling boundary**: Whatever credential the selected MCP server needs is handled entirely between the developer's client and that server process, established when the developer registered the server themselves. You never read, request, or pass a credential value at any point — your role begins only after that connection already exists.
 
 ---
 
@@ -228,18 +232,18 @@ With the seven intents bound to the MCP server's real tools (from Step 3.3), ins
 
 ### Scenario: MCP Not Configured, Not Reachable, or Introspection Failed
 
-If at any point during Steps 3–4 (introspection, tool binding, or execution) the MCP server is determined to be unavailable (not configured in the resolved rollout configuration, connection fails, introspection times out, or returns an error), **do NOT fail the overall `/speckit.implement` run**. Instead:
+If at any point during Step 3.1's resolution, or during Steps 3–4 (introspection, tool binding, or execution), the MCP server is determined to be unavailable — no saved MCP server selection in `local-config.yml`, no `launchdarkly.project_key`/`environments` in `rollout-config.yml` (the local-branch opt-out case), connection fails, introspection times out, or returns an error — **do NOT fail the overall `/speckit.implement` run**. Instead:
 
 1. **Continue implementation in plan-only mode**: Proceed with all non-rollout work normally (entity generation, non-rollout task execution, standard output).
 
-2. **Record exactly one setup task** (not multiple, not zero) that directs the user to configure the MCP connection:
+2. **Record exactly one setup task** (not multiple, not zero) that directs the user to configure the connection:
 
    ```
-   [ ] Setup: Configure LaunchDarkly MCP server (run `speckit.rollout.connect` to set up the provider connection)
+   [ ] Setup: Configure LaunchDarkly MCP server (run `speckit.rollout.config` to set up the provider connection)
    ```
 
-   - Reference `speckit.rollout.connect` as the command to run; do NOT include inline MCP registration, installation, or authentication steps (those are Feature 011's responsibility, currently a placeholder).
-   - Include a brief note that the provider actions (create flag, configure environments, configure targeting) could not be performed until the MCP is connected.
+   - Reference `speckit.rollout.config` as the command to run; do NOT include inline MCP registration, installation, or authentication steps (registering the MCP server with the client remains entirely the developer's own responsibility, unchanged from before).
+   - Include a brief note that the provider actions (create flag, configure environments, configure targeting) could not be performed until the connection is configured.
 
 3. **Do NOT simulate or fabricate provider actions**: Do NOT invent tool calls, fake API responses, or pretend actions were performed. The task simply records "this could not be done; run this command to fix it."
 
@@ -294,14 +298,14 @@ Use this checklist to verify you have addressed all functional requirements:
 - [ ] **FR-002**: If `hasFlags=false`, emitted a one-line no-op with zero MCP introspection or provider action
 - [ ] **FR-003**: If `hasFlags=true`, scanned `tasks.md` for rollout task presence (Feature 007 categories)
 - [ ] **FR-004**: If rollout tasks absent, emitted a distinct status message recommending `/speckit.tasks`, with zero MCP introspection
-- [ ] **FR-005**: Instructed using exactly the pinned LaunchDarkly MCP server reference, never a substitute
+- [ ] **FR-005**: Instructed using exactly the MCP server the developer already registered and selected via `speckit.rollout.config`, never a substitute
 - [ ] **FR-006**: Instructed runtime introspection via `tools/list`, `resources/list`, `prompts/list` before binding any tool
 - [ ] **FR-007**: Defined all seven provider-neutral intents (discover environments, discover segments, create flag, set targeting, set percentage rollout, read flag status, archive flag)
 - [ ] **FR-008**: Instructed executing rollout tasks using parameters from `plan.md`'s Delivery Strategy and `tasks.md`'s rollout tasks, never invented or re-derived from `spec.md` alone
 - [ ] **FR-009**: Instructed never advancing production exposure beyond current task/plan scope without explicit user instruction (production-exposure guardrail, NON-NEGOTIABLE)
 - [ ] **FR-010**: Instructed never reading/echoing/logging/inlining the provider token; confirmed no token value appears in this briefing (token-handling guardrail, NON-NEGOTIABLE)
 - [ ] **FR-011**: Instructed plan-only mode (continue without failing) when MCP is unreachable, with graceful degradation
-- [ ] **FR-012**: Did NOT include MCP registration/setup instructions beyond naming `speckit.rollout.connect` (Feature 011 scope)
+- [ ] **FR-012**: Did NOT include MCP registration/setup instructions beyond naming `speckit.rollout.config` (Feature 013 scope)
 - [ ] **FR-013**: Instructed skipping only affected actions when MCP doesn't advertise a tool for one of the seven intents, continuing with the rest
 - [ ] **FR-014**: This briefing body (replacing the placeholder in `commands/brief-implement.md`) contains the full pre-implement doctrine
 
