@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: rollout
   name: Rollout
-  version: 1.0.0
+  version: 0.1.0
   description: >-
     Progressive-delivery capability for Spec-Driven Development: teaches
     agents to recognize feature-flag / canary delivery candidates and fold a
