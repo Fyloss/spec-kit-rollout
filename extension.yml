@@ -8,7 +8,7 @@ extension:
     Progressive-delivery capability for Spec-Driven Development: teaches
     agents to recognize feature-flag / canary delivery candidates and fold a
     concrete rollout strategy into specs, plans, tasks, and implementation.
-  author: rollout contributors
+  author: Fyloss
   repository: https://github.com/github/spec-kit-rollout
   license: MIT
   homepage: https://github.com/github/spec-kit-rollout
