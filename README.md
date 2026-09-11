@@ -107,7 +107,14 @@ looks like with and without rollout signal present.
 From a Spec Kit-initialized project:
 
 ```bash
+# From local clone
 specify extension add <path-or-url-to-rollout> --dev
+
+# From Spec Kit Catalog
+specify extension add rollout
+
+# From GitHub release
+specify extension add rollout --from https://github.com/Fyloss/spec-kit-rollout/archive/refs/tags/v0.1.2.zip
 ```
 
 ## What it provides
